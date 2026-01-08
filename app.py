@@ -22,6 +22,29 @@ COINGECKO_IDS = {
 }
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
+def fetch_all_prices():
+    """Fetch all coin prices in a single API call"""
+    try:
+        coin_ids = ",".join(COINGECKO_IDS.values())
+        url = f"{COINGECKO_API_BASE}/simple/price"
+        params = {
+            "ids": coin_ids,
+            "vs_currencies": "usd",
+            "include_24hr_change": "true",
+            "include_market_cap": "true",
+            "include_24hr_vol": "true"
+        }
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 429:
+            # Rate limited - return None silently
+            return None
+    except Exception:
+        pass
+    return None
+
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def fetch_coin_price(coin_id):
     """Fetch current price from CoinGecko"""
     try:
@@ -36,8 +59,8 @@ def fetch_coin_price(coin_id):
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
             return response.json().get(coin_id, {})
-    except Exception as e:
-        st.warning(f"Could not fetch live price: {e}")
+    except Exception:
+        pass
     return None
 
 @st.cache_data(ttl=600)  # Cache for 10 minutes
@@ -58,8 +81,8 @@ def fetch_historical_prices(coin_id, days=90):
                 df = pd.DataFrame(prices, columns=["timestamp", "price"])
                 df["date"] = pd.to_datetime(df["timestamp"], unit="ms")
                 return df
-    except Exception as e:
-        st.warning(f"Could not fetch historical data: {e}")
+    except Exception:
+        pass
     return None
 
 @st.cache_data(ttl=600)  # Cache for 10 minutes
@@ -76,8 +99,8 @@ def fetch_coin_market_data(coin_id):
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
             return response.json()
-    except Exception as e:
-        st.warning(f"Could not fetch market data: {e}")
+    except Exception:
+        pass
     return None
 
 @st.cache_data(ttl=1800)  # Cache for 30 minutes
@@ -104,17 +127,31 @@ def fetch_defi_tvl():
     return {}
 
 def get_live_price(symbol):
-    """Get live price for a coin symbol"""
+    """Get live price for a coin symbol - tries batch fetch first, then individual"""
     coin_id = COINGECKO_IDS.get(symbol)
-    if coin_id:
-        data = fetch_coin_price(coin_id)
-        if data:
-            return {
-                "price": data.get("usd", 0),
-                "change_24h": data.get("usd_24h_change", 0),
-                "market_cap": data.get("usd_market_cap", 0) / 1e9,  # billions
-                "volume_24h": data.get("usd_24h_vol", 0) / 1e9  # billions
-            }
+    if not coin_id:
+        return None
+
+    # Try batch fetch first (more efficient)
+    all_prices = fetch_all_prices()
+    if all_prices and coin_id in all_prices:
+        data = all_prices[coin_id]
+        return {
+            "price": data.get("usd", 0),
+            "change_24h": data.get("usd_24h_change", 0),
+            "market_cap": data.get("usd_market_cap", 0) / 1e9 if data.get("usd_market_cap") else 0,
+            "volume_24h": data.get("usd_24h_vol", 0) / 1e9 if data.get("usd_24h_vol") else 0
+        }
+
+    # Fallback to individual fetch
+    data = fetch_coin_price(coin_id)
+    if data:
+        return {
+            "price": data.get("usd", 0),
+            "change_24h": data.get("usd_24h_change", 0),
+            "market_cap": data.get("usd_market_cap", 0) / 1e9 if data.get("usd_market_cap") else 0,
+            "volume_24h": data.get("usd_24h_vol", 0) / 1e9 if data.get("usd_24h_vol") else 0
+        }
     return None
 
 def get_historical_data(symbol, days=90):
