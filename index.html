@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Evaluation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="top" class="container">
+        <header>
+            <h1>Coin Evaluation</h1>
+            <p class="subtitle">Track and evaluate your favorite cryptocurrencies</p>
+        </header>
+
+        <!-- Coin Selector -->
+        <div class="coin-selector">
+            <div class="coin-tabs">
+                <button class="coin-tab active" data-coin="BTC">
+                    <span class="coin-icon">&#8383;</span>
+                    <span class="coin-name">BTC</span>
+                </button>
+                <button class="coin-tab" data-coin="HYPE">
+                    <span class="coin-icon">&#9733;</span>
+                    <span class="coin-name">HYPE</span>
+                </button>
+                <button class="coin-tab" data-coin="LIT">
+                    <span class="coin-icon">&#9889;</span>
+                    <span class="coin-name">LIT</span>
+                </button>
+                <button class="coin-tab" data-coin="SOL">
+                    <span class="coin-icon">&#9728;</span>
+                    <span class="coin-name">SOL</span>
+                </button>
+                <button class="coin-tab" data-coin="XPL">
+                    <span class="coin-icon">&#10022;</span>
+                    <span class="coin-name">XPL</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Coin Display Card -->
+        <div class="coin-card">
+            <div class="coin-header">
+                <div class="coin-title">
+                    <span id="selected-coin-icon" class="large-icon">&#8383;</span>
+                    <div>
+                        <h2 id="selected-coin-name">Bitcoin</h2>
+                        <span id="selected-coin-symbol" class="symbol">BTC</span>
+                    </div>
+                </div>
+                <div class="coin-price">
+                    <span id="coin-price" class="price">$97,245.00</span>
+                    <span id="coin-change" class="change positive">+2.45%</span>
+                </div>
+            </div>
+
+            <div class="coin-stats">
+                <div class="stat">
+                    <span class="stat-label">Market Cap</span>
+                    <span id="market-cap" class="stat-value">$1.92T</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">24h Volume</span>
+                    <span id="volume" class="stat-value">$28.5B</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Circulating Supply</span>
+                    <span id="supply" class="stat-value">19.8M BTC</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">All Time High</span>
+                    <span id="ath" class="stat-value">$108,135</span>
+                </div>
+            </div>
+
+            <div class="coin-description">
+                <h3>About</h3>
+                <p id="coin-description">Bitcoin is a decentralized digital currency that enables peer-to-peer transactions without the need for intermediaries. Created in 2009 by Satoshi Nakamoto, it uses blockchain technology to maintain a secure and transparent ledger.</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="action-btn primary">Buy <span id="action-coin">BTC</span></button>
+            <button class="action-btn secondary">View Chart</button>
+            <button class="action-btn secondary">Set Alert</button>
+        </div>
+
+        <footer>
+            <p>Data updates in real-time. Not financial advice.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
