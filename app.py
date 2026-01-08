@@ -4,6 +4,124 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import random
+import requests
+from functools import lru_cache
+import time
+
+# CoinGecko API Configuration
+COINGECKO_API_BASE = "https://api.coingecko.com/api/v3"
+
+# Coin ID mapping for CoinGecko API
+COINGECKO_IDS = {
+    "ETH": "ethereum",
+    "BTC": "bitcoin",
+    "SOL": "solana"
+}
+
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def fetch_coin_price(coin_id):
+    """Fetch current price from CoinGecko"""
+    try:
+        url = f"{COINGECKO_API_BASE}/simple/price"
+        params = {
+            "ids": coin_id,
+            "vs_currencies": "usd",
+            "include_24hr_change": "true",
+            "include_market_cap": "true",
+            "include_24hr_vol": "true"
+        }
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json().get(coin_id, {})
+    except Exception as e:
+        st.warning(f"Could not fetch live price: {e}")
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def fetch_historical_prices(coin_id, days=90):
+    """Fetch historical price data from CoinGecko"""
+    try:
+        url = f"{COINGECKO_API_BASE}/coins/{coin_id}/market_chart"
+        params = {
+            "vs_currency": "usd",
+            "days": days,
+            "interval": "daily"
+        }
+        response = requests.get(url, params=params, timeout=15)
+        if response.status_code == 200:
+            data = response.json()
+            prices = data.get("prices", [])
+            if prices:
+                df = pd.DataFrame(prices, columns=["timestamp", "price"])
+                df["date"] = pd.to_datetime(df["timestamp"], unit="ms")
+                return df
+    except Exception as e:
+        st.warning(f"Could not fetch historical data: {e}")
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def fetch_coin_market_data(coin_id):
+    """Fetch detailed market data from CoinGecko"""
+    try:
+        url = f"{COINGECKO_API_BASE}/coins/{coin_id}"
+        params = {
+            "localization": "false",
+            "tickers": "false",
+            "community_data": "false",
+            "developer_data": "false"
+        }
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        st.warning(f"Could not fetch market data: {e}")
+    return None
+
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def fetch_defi_tvl():
+    """Fetch DeFi TVL data from DefiLlama"""
+    try:
+        # DefiLlama API for TVL
+        url = "https://api.llama.fi/v2/chains"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            chains = response.json()
+            tvl_data = {}
+            for chain in chains:
+                name = chain.get("name", "").lower()
+                if name == "ethereum":
+                    tvl_data["ETH"] = chain.get("tvl", 0) / 1e9  # Convert to billions
+                elif name == "solana":
+                    tvl_data["SOL"] = chain.get("tvl", 0) / 1e9
+                elif name == "bitcoin":
+                    tvl_data["BTC"] = chain.get("tvl", 0) / 1e9
+            return tvl_data
+    except Exception as e:
+        pass
+    return {}
+
+def get_live_price(symbol):
+    """Get live price for a coin symbol"""
+    coin_id = COINGECKO_IDS.get(symbol)
+    if coin_id:
+        data = fetch_coin_price(coin_id)
+        if data:
+            return {
+                "price": data.get("usd", 0),
+                "change_24h": data.get("usd_24h_change", 0),
+                "market_cap": data.get("usd_market_cap", 0) / 1e9,  # billions
+                "volume_24h": data.get("usd_24h_vol", 0) / 1e9  # billions
+            }
+    return None
+
+def get_historical_data(symbol, days=90):
+    """Get historical price data for charts"""
+    coin_id = COINGECKO_IDS.get(symbol)
+    if coin_id:
+        df = fetch_historical_prices(coin_id, days)
+        if df is not None:
+            return df["date"].tolist(), df["price"].tolist()
+    return None, None
 
 # Page config
 st.set_page_config(
@@ -896,36 +1014,55 @@ def get_opportunity_status(current_price, fair_value):
     else:
         return "Overvalued", diff_pct
 
-def generate_historical_data(coin_data, days=90):
-    """Generate historical price and fair value data"""
-    np.random.seed(42)
-    dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
-
-    current_price = coin_data["current_price"]
+def generate_historical_data(coin_data, days=90, symbol="ETH"):
+    """Generate historical price and fair value data - uses real CoinGecko data"""
     fair_value = calculate_composite_fair_value(coin_data)
 
-    # Generate price data with some volatility
-    price_returns = np.random.normal(0.001, 0.03, days)
-    prices = [current_price]
-    for r in price_returns[:-1]:
-        prices.append(prices[-1] * (1 + r))
-    prices = prices[::-1]  # Reverse so current is last
+    # Try to fetch real historical data from CoinGecko
+    real_dates, real_prices = get_historical_data(symbol, days)
 
-    # Generate fair value data (less volatile)
-    fv_returns = np.random.normal(0.0005, 0.015, days)
-    fair_values = [fair_value]
-    for r in fv_returns[:-1]:
-        fair_values.append(fair_values[-1] * (1 + r))
-    fair_values = fair_values[::-1]
+    if real_dates and real_prices:
+        # Use real data
+        dates = real_dates
+        prices = real_prices
+        current_price = prices[-1] if prices else coin_data["current_price"]
+    else:
+        # Fallback to generated data if API fails
+        np.random.seed(42)
+        dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
+        current_price = coin_data["current_price"]
 
-    # Generate individual model values
+        price_returns = np.random.normal(0.001, 0.03, days)
+        prices = [current_price]
+        for r in price_returns[:-1]:
+            prices.append(prices[-1] * (1 + r))
+        prices = prices[::-1]
+
+    # Generate fair value data based on actual price movements
+    # Fair value tracks price with some smoothing
+    if len(prices) > 0:
+        price_array = np.array(prices)
+        # Calculate fair value as smoothed price adjusted by model ratio
+        ratio = fair_value / prices[-1] if prices[-1] > 0 else 1
+        fair_values = (price_array * ratio).tolist()
+    else:
+        fair_values = [fair_value] * len(dates)
+
+    # Generate individual model values based on price movement
     model_data = {}
     for model_name, model_info in coin_data["models"].items():
-        model_returns = np.random.normal(0.0005, 0.025, days)
-        values = [model_info["value"]]
-        for r in model_returns[:-1]:
-            values.append(values[-1] * (1 + r))
-        model_data[model_name] = values[::-1]
+        base_value = model_info["value"]
+        if len(prices) > 0:
+            # Scale model values based on price movement
+            price_ratio = np.array(prices) / prices[-1]
+            model_values = (base_value * price_ratio * np.random.uniform(0.95, 1.05, len(prices))).tolist()
+        else:
+            model_returns = np.random.normal(0.0005, 0.025, days)
+            values = [base_value]
+            for r in model_returns[:-1]:
+                values.append(values[-1] * (1 + r))
+            model_values = values[::-1]
+        model_data[model_name] = model_values
 
     return dates, prices, fair_values, model_data
 
@@ -1052,7 +1189,22 @@ with tabs[0]:  # Valuation tab
 
     # Get selected coin data
     coin = COINS[st.session_state.selected_coin]
-    current_price = coin["current_price"]
+
+    # Fetch live price from CoinGecko
+    live_data = get_live_price(st.session_state.selected_coin)
+    if live_data:
+        current_price = live_data["price"]
+        price_change_24h = live_data["change_24h"]
+        market_cap = live_data["market_cap"]
+        volume_24h = live_data["volume_24h"]
+        # Update coin data with live price for calculations
+        coin["current_price"] = current_price
+    else:
+        current_price = coin["current_price"]
+        price_change_24h = 0
+        market_cap = 0
+        volume_24h = 0
+
     composite_fv = calculate_composite_fair_value(coin)
     status, diff_pct = get_opportunity_status(current_price, composite_fv)
 
@@ -1062,10 +1214,16 @@ with tabs[0]:  # Valuation tab
     col1, col2 = st.columns([1, 2])
 
     with col1:
+        # Show live price with 24h change
+        change_class = "positive" if price_change_24h >= 0 else "negative"
+        change_color = "#00d4aa" if price_change_24h >= 0 else "#ff5252"
+        live_badge = '<span style="background: #00d4aa; color: #0a0a0f; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-left: 8px;">LIVE</span>' if live_data else ''
+
         st.markdown(f"""
         <div class="valuation-card">
-            <div class="metric-label">CURRENT PRICE</div>
-            <div class="metric-value-large">${current_price:,.1f}</div>
+            <div class="metric-label">CURRENT PRICE {live_badge}</div>
+            <div class="metric-value-large">${current_price:,.2f}</div>
+            <div style="color: {change_color}; font-size: 0.9rem; font-weight: 600;">{price_change_24h:+.2f}% (24h)</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1216,8 +1374,8 @@ with tabs[0]:  # Valuation tab
     # Section 01.2 - Historical Trends
     st.markdown('<h2 class="section-title"><span class="section-number">01.2</span> — Historical Trends</h2>', unsafe_allow_html=True)
 
-    # Generate historical data
-    dates, prices, fair_values, model_historical = generate_historical_data(coin)
+    # Generate historical data with real CoinGecko data
+    dates, prices, fair_values, model_historical = generate_historical_data(coin, days=90, symbol=st.session_state.selected_coin)
 
     # Chart controls
     chart_col1, chart_col2 = st.columns([3, 1])
