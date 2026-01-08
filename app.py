@@ -571,6 +571,176 @@ st.markdown("""
         font-size: 0.75rem;
         font-weight: 600;
     }
+
+    /* Metric cards for Locked Capital / Settlement Volume */
+    .metric-card-container {
+        background: #12121a;
+        border: 1px solid #1a1a2e;
+        border-radius: 12px;
+        padding: 1.25rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .metric-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-card-title {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #ffffff;
+    }
+
+    .metric-card-time-selector {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .time-btn {
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        background: transparent;
+        color: #6b6b7e;
+        border: none;
+        cursor: pointer;
+    }
+
+    .time-btn.active {
+        background: #00d4aa;
+        color: #0a0a0f;
+    }
+
+    .metric-card-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-card-chart {
+        flex: 1;
+        min-height: 60px;
+        margin: 0.5rem 0;
+    }
+
+    .metric-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 0.5rem;
+        border-top: 1px solid #1a1a2e;
+    }
+
+    .metric-card-source {
+        font-size: 0.75rem;
+        color: #6b6b7e;
+    }
+
+    .metric-card-change {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .metric-card-change.positive {
+        color: #00d4aa;
+    }
+
+    .metric-card-change.negative {
+        color: #ff5252;
+    }
+
+    .metric-card-description {
+        font-size: 0.75rem;
+        color: #6b6b7e;
+        line-height: 1.4;
+        margin-top: 0.5rem;
+    }
+
+    /* Status indicators */
+    .status-section {
+        background: #12121a;
+        border: 1px solid #1a1a2e;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .status-icon {
+        font-size: 1rem;
+    }
+
+    .status-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: auto;
+    }
+
+    .status-badge.hot {
+        background: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+    }
+
+    .status-badge.down {
+        background: rgba(255, 82, 82, 0.2);
+        color: #ff5252;
+    }
+
+    .status-badge.bullish {
+        background: rgba(0, 212, 170, 0.2);
+        color: #00d4aa;
+    }
+
+    .status-description {
+        font-size: 0.85rem;
+        color: #8b8b9e;
+        line-height: 1.6;
+    }
+
+    .status-bar {
+        height: 4px;
+        background: #1a1a2e;
+        border-radius: 2px;
+        margin: 0.75rem 0;
+        overflow: hidden;
+    }
+
+    .status-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+    }
+
+    .status-bar-fill.orange {
+        background: linear-gradient(90deg, #ff9800, #ffb74d);
+    }
+
+    .status-bar-fill.red {
+        background: linear-gradient(90deg, #ff5252, #ff7b7b);
+    }
+
+    .status-bar-fill.green {
+        background: linear-gradient(90deg, #00d4aa, #00ffcc);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -601,7 +771,27 @@ COINS = {
             "stablecoins": 164.9,  # billions
             "daily_addresses": 620,  # thousands
             "l2_tvl": 45.2,  # billions
-        }
+        },
+        "locked_capital": {
+            "l1_tvl": {"value": 74.8, "change": -9.7, "source": "DefiLlama", "desc": "Total USD value locked in Ethereum L1 DeFi protocols (Aave, Lido, MakerDAO, etc). Key measure of DeFi adoption."},
+            "l2_tvl": {"value": 8.8, "change": -16.8, "source": "DefiLlama", "desc": "Total USD value locked in L2 rollups (Arbitrum, Optimism, Base, zkSync, etc). Growing L2 TVL indicates scaling adoption."},
+            "defi_lending_tvl": {"value": 37.42, "change": -9.7, "source": "DefiLlama", "desc": "Assets in L1 DeFi lending protocols (Aave, Compound, etc). Indicates mainnet DeFi capital."},
+            "l1_stablecoin": {"value": 165.2, "change": 3.3, "source": "DefiLlama", "desc": "Stablecoin value on Ethereum. Shows ETH dominance as settlement layer."},
+            "l2_stablecoin": {"value": 15.26, "change": -8.8, "source": "Dune", "desc": "Total stablecoin supply on L2s (USDC, USDT, DAI, USDe). Indicates L2 capital inflow."},
+            "app_capital": {"value": 590, "change": 3.3, "source": "Calculated", "desc": "Capital deployed in Ethereum apps (DeFi, stables, etc)."},
+        },
+        "settlement_volume": {
+            "l1_total_volume": {"value": 256.8, "change": 13.6, "source": "Dune", "desc": "Total on-chain volume (ETH + all ERC-20 tokens). Complete L1 settlement."},
+            "l1_eth_transfer": {"value": 1.1, "change": -98.1, "source": "Dune", "desc": "Daily ETH transfers on mainnet. Native token settlement only."},
+            "l1_stablecoin_volume": {"value": 59.05, "change": -44.7, "source": "Dune", "desc": "Daily stablecoin transfer volume on Ethereum (USDT, USDC, DAI, USDe, FDUSD)."},
+            "l1_dex_volume": {"value": 1.9, "change": -62.4, "source": "DefiLlama", "desc": "Weekly DEX trading volume on L1 Ethereum. Key indicator of mainnet DeFi activity."},
+            "l2_total_volume": {"value": 443.4, "change": 165.4, "source": "Dune", "desc": "Total on-chain volume across 8 L2s (Native + all tokens). Complete L2 settlement."},
+            "l2_eth_transfer": {"value": 0.1037, "change": -92.7, "source": "Dune", "desc": "ETH transfers on L2s (excludes Mantle MNT). For ETH Monetary calculation."},
+            "l2_stablecoin_volume": {"value": 77.84, "change": 19.8, "source": "Dune", "desc": "Daily stablecoin transfer volume on L2s (Arbitrum, Base, Optimism, Polygon, zkSync, Linea, Scroll)."},
+            "l2_dex_volume": {"value": 0.1896, "change": -94.5, "source": "Dune", "desc": "Daily DEX trading volume on L2s (Arbitrum, Optimism, Base, etc). DeFi activity indicator."},
+            "bridge_total_volume": {"value": 0.1618, "change": -50.7, "source": "Dune", "desc": "All assets bridged to L2s (ETH + ERC-20 tokens). Total cross-chain capital flow."},
+            "bridge_eth_volume": {"value": 0.0034, "change": -93.5, "source": "Dune", "desc": "Daily ETH bridged to L2s. Cross-chain ETH flow indicator."},
+        },
     },
     "BTC": {
         "name": "Bitcoin",
@@ -628,7 +818,23 @@ COINS = {
             "stablecoins": 0,
             "daily_addresses": 950,
             "l2_tvl": 2.5,
-        }
+        },
+        "locked_capital": {
+            "l1_tvl": {"value": 1.2, "change": 15.2, "source": "DefiLlama", "desc": "Total USD value locked in Bitcoin DeFi protocols. Emerging BTC DeFi ecosystem."},
+            "l2_tvl": {"value": 2.5, "change": 45.3, "source": "DefiLlama", "desc": "Total USD value locked in Bitcoin L2s (Lightning, Stacks, etc)."},
+            "lightning_capacity": {"value": 0.52, "change": 8.2, "source": "mempool.space", "desc": "Total BTC capacity in Lightning Network channels."},
+            "wrapped_btc": {"value": 12.5, "change": -5.4, "source": "DefiLlama", "desc": "WBTC and other wrapped BTC on Ethereum and other chains."},
+            "ordinals_tvl": {"value": 0.85, "change": 125.0, "source": "Dune", "desc": "Value locked in Ordinals and BRC-20 tokens."},
+            "runes_tvl": {"value": 0.32, "change": 85.0, "source": "Dune", "desc": "Value in Runes protocol tokens."},
+        },
+        "settlement_volume": {
+            "l1_total_volume": {"value": 15.2, "change": 5.2, "source": "blockchain.com", "desc": "Total on-chain BTC transfer volume."},
+            "lightning_volume": {"value": 0.125, "change": 22.5, "source": "mempool.space", "desc": "Daily Lightning Network payment volume."},
+            "exchange_inflow": {"value": 2.8, "change": -15.3, "source": "Glassnode", "desc": "BTC flowing into exchanges."},
+            "exchange_outflow": {"value": 3.2, "change": 8.5, "source": "Glassnode", "desc": "BTC flowing out of exchanges."},
+            "miner_revenue": {"value": 0.045, "change": -12.5, "source": "blockchain.com", "desc": "Daily miner revenue from fees and block rewards."},
+            "whale_transactions": {"value": 8.5, "change": 25.0, "source": "Glassnode", "desc": "Large transactions (>$100K)."},
+        },
     },
     "SOL": {
         "name": "Solana",
@@ -655,7 +861,23 @@ COINS = {
             "stablecoins": 5.2,
             "daily_addresses": 2100,
             "l2_tvl": 0,
-        }
+        },
+        "locked_capital": {
+            "defi_tvl": {"value": 8.5, "change": 45.2, "source": "DefiLlama", "desc": "Total USD value locked in Solana DeFi protocols (Marinade, Jito, Raydium, etc)."},
+            "staking_tvl": {"value": 78.5, "change": 12.3, "source": "Solana Beach", "desc": "Total SOL staked with validators. Core network security."},
+            "liquid_staking": {"value": 5.2, "change": 65.0, "source": "DefiLlama", "desc": "SOL in liquid staking protocols (Marinade mSOL, Jito jitoSOL)."},
+            "stablecoin_supply": {"value": 5.2, "change": 85.0, "source": "DefiLlama", "desc": "Stablecoin value on Solana (USDC, USDT). Growing payments adoption."},
+            "nft_tvl": {"value": 0.85, "change": -25.0, "source": "Magic Eden", "desc": "Value in NFT collections and marketplaces."},
+            "meme_tvl": {"value": 2.5, "change": 250.0, "source": "Dune", "desc": "Capital in meme coins and speculation."},
+        },
+        "settlement_volume": {
+            "total_volume": {"value": 125.5, "change": 85.0, "source": "Dune", "desc": "Total on-chain transfer volume (SOL + SPL tokens)."},
+            "dex_volume": {"value": 3.5, "change": 120.0, "source": "DefiLlama", "desc": "Daily DEX trading volume (Raydium, Orca, Jupiter)."},
+            "stablecoin_volume": {"value": 8.5, "change": 95.0, "source": "Dune", "desc": "Daily stablecoin transfer volume on Solana."},
+            "nft_volume": {"value": 0.025, "change": -45.0, "source": "Magic Eden", "desc": "Daily NFT trading volume."},
+            "perp_volume": {"value": 1.2, "change": 150.0, "source": "DefiLlama", "desc": "Perpetual futures trading volume."},
+            "payment_volume": {"value": 0.15, "change": 200.0, "source": "Solana Pay", "desc": "Solana Pay merchant payment volume."},
+        },
     }
 }
 
@@ -706,6 +928,99 @@ def generate_historical_data(coin_data, days=90):
         model_data[model_name] = values[::-1]
 
     return dates, prices, fair_values, model_data
+
+def generate_mini_chart_data(current_value, change_pct, days=90):
+    """Generate mini chart data for metric cards"""
+    np.random.seed(hash(str(current_value)) % 2**32)
+
+    # Calculate starting value based on change percentage
+    start_value = current_value / (1 + change_pct / 100)
+
+    # Generate data with trend
+    trend = np.linspace(start_value, current_value, days)
+    noise = np.random.normal(0, abs(current_value - start_value) * 0.1, days)
+    values = trend + noise
+
+    return values.tolist()
+
+def create_mini_chart(values, color, height=60):
+    """Create a mini sparkline chart"""
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        y=values,
+        mode='lines',
+        line=dict(color=color, width=2),
+        fill='tozeroy',
+        fillcolor=f'rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.1)',
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+
+    fig.update_layout(
+        height=height,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(visible=False, showgrid=False),
+        yaxis=dict(visible=False, showgrid=False),
+    )
+
+    return fig
+
+def format_value(value, prefix="$", suffix="B"):
+    """Format value with appropriate suffix"""
+    if value >= 1000:
+        return f"{prefix}{value/1000:.1f}T"
+    elif value >= 1:
+        return f"{prefix}{value:.2f}{suffix}"
+    elif value >= 0.001:
+        return f"{prefix}{value*1000:.1f}M"
+    else:
+        return f"{prefix}{value*1000000:.1f}K"
+
+def render_metric_card(title, data, chart_color):
+    """Render a metric card with mini chart"""
+    value = data["value"]
+    change = data["change"]
+    source = data["source"]
+    desc = data["desc"]
+
+    # Generate chart data
+    chart_data = generate_mini_chart_data(value, change)
+
+    # Determine color based on change
+    change_class = "positive" if change >= 0 else "negative"
+    change_color = "#00d4aa" if change >= 0 else "#ff5252"
+
+    # Format value
+    formatted_value = format_value(value)
+
+    st.markdown(f"""
+    <div class="metric-card-container">
+        <div class="metric-card-header">
+            <span class="metric-card-title">{title}</span>
+            <div class="metric-card-time-selector">
+                <span class="time-btn active">90D</span>
+                <span class="time-btn">1Y</span>
+                <span class="time-btn">3Y</span>
+            </div>
+        </div>
+        <div class="metric-card-value">{formatted_value}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Mini chart
+    fig = create_mini_chart(chart_data, chart_color)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+    st.markdown(f"""
+    <div class="metric-card-footer">
+        <span class="metric-card-source">{source}</span>
+        <span class="metric-card-change {change_class}">{change:+.1f}% 90D</span>
+    </div>
+    <div class="metric-card-description">{desc}</div>
+    """, unsafe_allow_html=True)
 
 # Initialize session state
 if 'selected_coin' not in st.session_state:
@@ -1142,6 +1457,235 @@ with tabs[0]:  # Valuation tab
             <div class="composite-change">{sim_diff:+.1f}% vs Current</div>
         </div>
         """, unsafe_allow_html=True)
+
+    # Section 02.6 - Locked Capital
+    st.markdown('<h2 class="section-title"><span class="section-number">02.6</span> — Locked Capital</h2>', unsafe_allow_html=True)
+
+    # Get locked capital data
+    locked_capital = coin.get("locked_capital", {})
+
+    # Chart colors for different metrics
+    lc_colors = ['#00d4aa', '#f472b6', '#ffd93d', '#4d96ff', '#a855f7', '#fb923c']
+
+    # Define display names for locked capital metrics
+    lc_display_names = {
+        # ETH metrics
+        "l1_tvl": "L1 Total Value Locked",
+        "l2_tvl": "L2 Total Value Locked",
+        "defi_lending_tvl": "DeFi Lending TVL",
+        "l1_stablecoin": "L1 Stablecoin Supply",
+        "l2_stablecoin": "L2 Stablecoin Supply",
+        "app_capital": "App Capital",
+        # BTC metrics
+        "lightning_capacity": "Lightning Capacity",
+        "wrapped_btc": "Wrapped BTC",
+        "ordinals_tvl": "Ordinals TVL",
+        "runes_tvl": "Runes TVL",
+        # SOL metrics
+        "defi_tvl": "DeFi TVL",
+        "staking_tvl": "Staking TVL",
+        "liquid_staking": "Liquid Staking",
+        "stablecoin_supply": "Stablecoin Supply",
+        "nft_tvl": "NFT TVL",
+        "meme_tvl": "Meme Coin TVL",
+    }
+
+    # Create grid for locked capital metrics
+    lc_items = list(locked_capital.items())
+
+    # First row (4 columns for ETH, 3 for others)
+    if len(lc_items) >= 4:
+        row1_cols = st.columns(4)
+        for i in range(min(4, len(lc_items))):
+            key, data = lc_items[i]
+            display_name = lc_display_names.get(key, key.replace("_", " ").title())
+            chart_color = lc_colors[i % len(lc_colors)]
+            change_class = "positive" if data["change"] >= 0 else "negative"
+
+            with row1_cols[i]:
+                chart_data = generate_mini_chart_data(data["value"], data["change"])
+                formatted_value = format_value(data["value"])
+
+                st.markdown(f"""
+                <div class="metric-card-container">
+                    <div class="metric-card-header">
+                        <span class="metric-card-title">{display_name}</span>
+                        <div class="metric-card-time-selector">
+                            <span class="time-btn active">90D</span>
+                            <span class="time-btn">1Y</span>
+                            <span class="time-btn">3Y</span>
+                        </div>
+                    </div>
+                    <div class="metric-card-value">{formatted_value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                fig = create_mini_chart(chart_data, chart_color)
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+                st.markdown(f"""
+                <div class="metric-card-footer">
+                    <span class="metric-card-source">{data["source"]}</span>
+                    <span class="metric-card-change {change_class}">{data["change"]:+.1f}% 90D</span>
+                </div>
+                <div class="metric-card-description">{data["desc"]}</div>
+                """, unsafe_allow_html=True)
+
+    # Second row (remaining items)
+    if len(lc_items) > 4:
+        row2_cols = st.columns(min(4, len(lc_items) - 4))
+        for i in range(4, len(lc_items)):
+            key, data = lc_items[i]
+            display_name = lc_display_names.get(key, key.replace("_", " ").title())
+            chart_color = lc_colors[i % len(lc_colors)]
+            change_class = "positive" if data["change"] >= 0 else "negative"
+
+            with row2_cols[i - 4]:
+                chart_data = generate_mini_chart_data(data["value"], data["change"])
+                formatted_value = format_value(data["value"])
+
+                st.markdown(f"""
+                <div class="metric-card-container">
+                    <div class="metric-card-header">
+                        <span class="metric-card-title">{display_name}</span>
+                        <div class="metric-card-time-selector">
+                            <span class="time-btn active">90D</span>
+                            <span class="time-btn">1Y</span>
+                            <span class="time-btn">3Y</span>
+                        </div>
+                    </div>
+                    <div class="metric-card-value">{formatted_value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                fig = create_mini_chart(chart_data, chart_color)
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+                st.markdown(f"""
+                <div class="metric-card-footer">
+                    <span class="metric-card-source">{data["source"]}</span>
+                    <span class="metric-card-change {change_class}">{data["change"]:+.1f}% 90D</span>
+                </div>
+                <div class="metric-card-description">{data["desc"]}</div>
+                """, unsafe_allow_html=True)
+
+    # Status indicators for Locked Capital
+    st.markdown("""
+    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+        <div class="status-section" style="flex: 1;">
+            <div class="status-header">
+                <span class="status-icon">📊</span>
+                <span class="status-title">Current Status</span>
+                <span class="status-badge hot">Hot</span>
+            </div>
+            <div class="status-bar"><div class="status-bar-fill orange" style="width: 75%;"></div></div>
+            <div class="status-description">
+                Locked capital landscape reveals a complex and dynamic ecosystem characterized by substantial capital concentration and strategic positioning across multiple layers of blockchain infrastructure.
+            </div>
+        </div>
+        <div class="status-section" style="flex: 1;">
+            <div class="status-header">
+                <span class="status-icon">📈</span>
+                <span class="status-title">90-Day Trend</span>
+                <span class="status-badge down">Down</span>
+            </div>
+            <div class="status-bar"><div class="status-bar-fill red" style="width: 40%;"></div></div>
+            <div class="status-description">
+                Layers of blockchain capital demonstrate intricate interconnectedness through multiple channels of value transmission and storage mechanisms.
+            </div>
+        </div>
+        <div class="status-section" style="flex: 1;">
+            <div class="status-header">
+                <span class="status-icon">💡</span>
+                <span class="status-title">Valuation Insight</span>
+                <span class="status-badge bullish">Slightly Bullish</span>
+            </div>
+            <div class="status-bar"><div class="status-bar-fill green" style="width: 60%;"></div></div>
+            <div class="status-description">
+                Ecosystem exhibits remarkable adaptability with complex capital allocation mechanisms that transcend traditional financial boundaries.
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Section 02.7 - Settlement Volume
+    st.markdown('<h2 class="section-title"><span class="section-number">02.7</span> — Settlement Volume</h2>', unsafe_allow_html=True)
+
+    # Get settlement volume data
+    settlement_volume = coin.get("settlement_volume", {})
+
+    # Chart colors for settlement volume
+    sv_colors = ['#4d96ff', '#ffd93d', '#a855f7', '#00d4aa', '#fb923c', '#f472b6', '#22d3ee', '#a3e635', '#e879f9', '#ff6b6b']
+
+    # Define display names for settlement volume metrics
+    sv_display_names = {
+        # ETH metrics
+        "l1_total_volume": "L1 Total Volume",
+        "l1_eth_transfer": "L1 ETH Transfer",
+        "l1_stablecoin_volume": "L1 Stablecoin Volume",
+        "l1_dex_volume": "L1 DEX Volume",
+        "l2_total_volume": "L2 Total Volume",
+        "l2_eth_transfer": "L2 ETH Transfer",
+        "l2_stablecoin_volume": "L2 Stablecoin Volume",
+        "l2_dex_volume": "L2 DEX Volume",
+        "bridge_total_volume": "Bridge Total Volume",
+        "bridge_eth_volume": "Bridge ETH Volume",
+        # BTC metrics
+        "lightning_volume": "Lightning Volume",
+        "exchange_inflow": "Exchange Inflow",
+        "exchange_outflow": "Exchange Outflow",
+        "miner_revenue": "Miner Revenue",
+        "whale_transactions": "Whale Transactions",
+        # SOL metrics
+        "total_volume": "Total Volume",
+        "dex_volume": "DEX Volume",
+        "stablecoin_volume": "Stablecoin Volume",
+        "nft_volume": "NFT Volume",
+        "perp_volume": "Perp Volume",
+        "payment_volume": "Payment Volume",
+    }
+
+    sv_items = list(settlement_volume.items())
+
+    # Create rows of 4 columns each
+    for row_start in range(0, len(sv_items), 4):
+        row_end = min(row_start + 4, len(sv_items))
+        row_cols = st.columns(4)
+
+        for i in range(row_start, row_end):
+            key, data = sv_items[i]
+            display_name = sv_display_names.get(key, key.replace("_", " ").title())
+            chart_color = sv_colors[i % len(sv_colors)]
+            change_class = "positive" if data["change"] >= 0 else "negative"
+
+            with row_cols[i - row_start]:
+                chart_data = generate_mini_chart_data(data["value"], data["change"])
+                formatted_value = format_value(data["value"])
+
+                st.markdown(f"""
+                <div class="metric-card-container">
+                    <div class="metric-card-header">
+                        <span class="metric-card-title">{display_name}</span>
+                        <div class="metric-card-time-selector">
+                            <span class="time-btn active">90D</span>
+                            <span class="time-btn">1Y</span>
+                            <span class="time-btn">3Y</span>
+                        </div>
+                    </div>
+                    <div class="metric-card-value">{formatted_value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                fig = create_mini_chart(chart_data, chart_color)
+                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+
+                st.markdown(f"""
+                <div class="metric-card-footer">
+                    <span class="metric-card-source">{data["source"]}</span>
+                    <span class="metric-card-change {change_class}">{data["change"]:+.1f}% 90D</span>
+                </div>
+                <div class="metric-card-description">{data["desc"]}</div>
+                """, unsafe_allow_html=True)
 
 with tabs[1]:  # Fundamentals tab
     st.markdown("### Fundamentals")
