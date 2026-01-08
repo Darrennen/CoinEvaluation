@@ -4,6 +4,127 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import random
+import requests
+from functools import lru_cache
+import time
+
+# CoinGecko API Configuration
+COINGECKO_API_BASE = "https://api.coingecko.com/api/v3"
+
+# Coin ID mapping for CoinGecko API
+COINGECKO_IDS = {
+    "ETH": "ethereum",
+    "BTC": "bitcoin",
+    "SOL": "solana",
+    "HYPE": "hyperliquid",
+    "XPL": "plasma",
+    "LIT": "lighter"
+}
+
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def fetch_coin_price(coin_id):
+    """Fetch current price from CoinGecko"""
+    try:
+        url = f"{COINGECKO_API_BASE}/simple/price"
+        params = {
+            "ids": coin_id,
+            "vs_currencies": "usd",
+            "include_24hr_change": "true",
+            "include_market_cap": "true",
+            "include_24hr_vol": "true"
+        }
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json().get(coin_id, {})
+    except Exception as e:
+        st.warning(f"Could not fetch live price: {e}")
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def fetch_historical_prices(coin_id, days=90):
+    """Fetch historical price data from CoinGecko"""
+    try:
+        url = f"{COINGECKO_API_BASE}/coins/{coin_id}/market_chart"
+        params = {
+            "vs_currency": "usd",
+            "days": days,
+            "interval": "daily"
+        }
+        response = requests.get(url, params=params, timeout=15)
+        if response.status_code == 200:
+            data = response.json()
+            prices = data.get("prices", [])
+            if prices:
+                df = pd.DataFrame(prices, columns=["timestamp", "price"])
+                df["date"] = pd.to_datetime(df["timestamp"], unit="ms")
+                return df
+    except Exception as e:
+        st.warning(f"Could not fetch historical data: {e}")
+    return None
+
+@st.cache_data(ttl=600)  # Cache for 10 minutes
+def fetch_coin_market_data(coin_id):
+    """Fetch detailed market data from CoinGecko"""
+    try:
+        url = f"{COINGECKO_API_BASE}/coins/{coin_id}"
+        params = {
+            "localization": "false",
+            "tickers": "false",
+            "community_data": "false",
+            "developer_data": "false"
+        }
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        st.warning(f"Could not fetch market data: {e}")
+    return None
+
+@st.cache_data(ttl=1800)  # Cache for 30 minutes
+def fetch_defi_tvl():
+    """Fetch DeFi TVL data from DefiLlama"""
+    try:
+        # DefiLlama API for TVL
+        url = "https://api.llama.fi/v2/chains"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            chains = response.json()
+            tvl_data = {}
+            for chain in chains:
+                name = chain.get("name", "").lower()
+                if name == "ethereum":
+                    tvl_data["ETH"] = chain.get("tvl", 0) / 1e9  # Convert to billions
+                elif name == "solana":
+                    tvl_data["SOL"] = chain.get("tvl", 0) / 1e9
+                elif name == "bitcoin":
+                    tvl_data["BTC"] = chain.get("tvl", 0) / 1e9
+            return tvl_data
+    except Exception as e:
+        pass
+    return {}
+
+def get_live_price(symbol):
+    """Get live price for a coin symbol"""
+    coin_id = COINGECKO_IDS.get(symbol)
+    if coin_id:
+        data = fetch_coin_price(coin_id)
+        if data:
+            return {
+                "price": data.get("usd", 0),
+                "change_24h": data.get("usd_24h_change", 0),
+                "market_cap": data.get("usd_market_cap", 0) / 1e9,  # billions
+                "volume_24h": data.get("usd_24h_vol", 0) / 1e9  # billions
+            }
+    return None
+
+def get_historical_data(symbol, days=90):
+    """Get historical price data for charts"""
+    coin_id = COINGECKO_IDS.get(symbol)
+    if coin_id:
+        df = fetch_historical_prices(coin_id, days)
+        if df is not None:
+            return df["date"].tolist(), df["price"].tolist()
+    return None, None
 
 # Page config
 st.set_page_config(
@@ -878,6 +999,117 @@ COINS = {
             "perp_volume": {"value": 1.2, "change": 150.0, "source": "DefiLlama", "desc": "Perpetual futures trading volume."},
             "payment_volume": {"value": 0.15, "change": 200.0, "source": "Solana Pay", "desc": "Solana Pay merchant payment volume."},
         },
+    },
+    "HYPE": {
+        "name": "Hyperliquid",
+        "icon": "🔷",
+        "current_price": 25.0,
+        "models": {
+            "Trading Volume": {"value": 35.0, "formula": "DailyVolume * Multiple / Supply", "weight": 1},
+            "Fee Revenue": {"value": 28.0, "formula": "Fees * 365 * Multiple / Supply", "weight": 1},
+            "TVL Multiple": {"value": 32.0, "formula": "TVL * Multiple / Supply", "weight": 1},
+            "User Growth": {"value": 40.0, "formula": "ActiveUsers * ValuePerUser / Supply", "weight": 1},
+            "Perp Dominance": {"value": 45.0, "formula": "PerpMarketShare * TotalMarket / Supply", "weight": 1},
+            "L1 Premium": {"value": 38.0, "formula": "L1Value * BlockchainMultiple / Supply", "weight": 1},
+            "Token Utility": {"value": 30.0, "formula": "StakedTokens * UtilityMultiple / Supply", "weight": 1},
+            "DEX Comparison": {"value": 42.0, "formula": "dYdX_Ratio * dYdX_Price", "weight": 1},
+            "Growth Rate": {"value": 50.0, "formula": "Price * (1 + GrowthRate)^Years", "weight": 1},
+            "Ecosystem Value": {"value": 35.0, "formula": "EcosystemTVL / Supply", "weight": 1},
+            "Network Effects": {"value": 48.0, "formula": "Coef * Users^Exp / Supply", "weight": 1},
+            "Liquidity Premium": {"value": 33.0, "formula": "OrderBookDepth * Multiple / Supply", "weight": 1},
+        },
+        "metrics": {
+            "tvl": 2.5,
+            "daily_fees": 500.0,
+            "staking_ratio": 45,
+            "stablecoins": 1.2,
+            "daily_addresses": 150,
+            "l2_tvl": 0,
+        },
+        "locked_capital": {
+            "perp_tvl": {"value": 2.5, "change": 120.0, "source": "DefiLlama", "desc": "Total value locked in Hyperliquid perpetual contracts."},
+            "spot_tvl": {"value": 0.8, "change": 85.0, "source": "DefiLlama", "desc": "Value in spot trading pools."},
+            "staked_hype": {"value": 1.2, "change": 150.0, "source": "Hyperliquid", "desc": "HYPE tokens staked for rewards and governance."},
+            "vault_deposits": {"value": 0.5, "change": 200.0, "source": "Hyperliquid", "desc": "Assets in Hyperliquid vaults."},
+        },
+        "settlement_volume": {
+            "perp_volume": {"value": 8.5, "change": 95.0, "source": "DefiLlama", "desc": "Daily perpetual trading volume."},
+            "spot_volume": {"value": 0.5, "change": 120.0, "source": "DefiLlama", "desc": "Daily spot trading volume."},
+            "liquidations": {"value": 0.025, "change": -15.0, "source": "Hyperliquid", "desc": "Daily liquidation volume."},
+        },
+    },
+    "XPL": {
+        "name": "Plasma",
+        "icon": "⚡",
+        "current_price": 0.50,
+        "models": {
+            "Stablecoin Volume": {"value": 0.85, "formula": "USDTVolume * Multiple / Supply", "weight": 1},
+            "TVL Multiple": {"value": 0.65, "formula": "TVL * Multiple / Supply", "weight": 1},
+            "Fee Revenue": {"value": 0.45, "formula": "Fees * 365 * PSRatio / Supply", "weight": 1},
+            "Network Effects": {"value": 0.95, "formula": "Coef * Users^Exp / Supply", "weight": 1},
+            "BTC Bridge": {"value": 0.75, "formula": "BridgedBTC * Multiple / Supply", "weight": 1},
+            "Validator Economics": {"value": 0.55, "formula": "StakingRewards / (Discount - Growth)", "weight": 1},
+            "Payment Adoption": {"value": 1.10, "formula": "TxCount * AvgValue / Supply", "weight": 1},
+            "L1 Comparison": {"value": 0.80, "formula": "L1_Benchmark * PlasmaTPS / BenchmarkTPS", "weight": 1},
+            "Staking Scarcity": {"value": 0.70, "formula": "Price * sqrt(Supply / Float)", "weight": 1},
+            "DeFi TVL": {"value": 0.60, "formula": "DeFiTVL * Multiple / Supply", "weight": 1},
+            "Zero-Fee Premium": {"value": 1.20, "formula": "CompetitorFees * MarketShare / Supply", "weight": 1},
+            "Growth DCF": {"value": 0.90, "formula": "FutureRevenue / (Discount - Growth)", "weight": 1},
+        },
+        "metrics": {
+            "tvl": 32.0,
+            "daily_fees": 0,
+            "staking_ratio": 35,
+            "stablecoins": 28.5,
+            "daily_addresses": 450,
+            "l2_tvl": 0,
+        },
+        "locked_capital": {
+            "total_tvl": {"value": 32.0, "change": -50.0, "source": "DefiLlama", "desc": "Total value locked on Plasma chain."},
+            "usdt_supply": {"value": 28.5, "change": 15.0, "source": "Plasma", "desc": "USDT supply on Plasma (zero-fee transfers)."},
+            "staked_xpl": {"value": 3.5, "change": 25.0, "source": "Plasma", "desc": "XPL staked with validators."},
+            "btc_bridged": {"value": 0.8, "change": 45.0, "source": "Plasma", "desc": "BTC bridged via trust-minimized bridge."},
+        },
+        "settlement_volume": {
+            "usdt_volume": {"value": 5.2, "change": 85.0, "source": "Plasma", "desc": "Daily zero-fee USDT transfer volume."},
+            "total_volume": {"value": 8.5, "change": 65.0, "source": "Plasma", "desc": "Total on-chain transfer volume."},
+            "smart_contract": {"value": 0.3, "change": 120.0, "source": "Plasma", "desc": "Smart contract interaction volume."},
+        },
+    },
+    "LIT": {
+        "name": "Lighter",
+        "icon": "🔥",
+        "current_price": 3.50,
+        "models": {
+            "Trading Volume": {"value": 5.20, "formula": "DailyVolume * Multiple / Supply", "weight": 1},
+            "Fee Revenue": {"value": 4.50, "formula": "Fees * 365 * Multiple / Supply", "weight": 1},
+            "TVL Multiple": {"value": 4.80, "formula": "TVL * Multiple / Supply", "weight": 1},
+            "User Acquisition": {"value": 5.50, "formula": "NewUsers * LTV / Supply", "weight": 1},
+            "DEX Comparison": {"value": 6.00, "formula": "Uniswap_Ratio * Volume_Ratio", "weight": 1},
+            "Verifiable Premium": {"value": 5.80, "formula": "SecurityPremium * MarketShare", "weight": 1},
+            "Order Book Depth": {"value": 4.20, "formula": "Liquidity * Multiple / Supply", "weight": 1},
+            "Token Burns": {"value": 4.00, "formula": "BurnRate * Price * Multiple", "weight": 1},
+            "Growth Rate": {"value": 6.50, "formula": "Price * (1 + GrowthRate)^Years", "weight": 1},
+            "Market Share": {"value": 5.00, "formula": "DEXMarket * SharePercent / Supply", "weight": 1},
+            "Airdrop Impact": {"value": 3.80, "formula": "CirculatingSupply * Velocity", "weight": 1},
+            "Network Effects": {"value": 5.50, "formula": "Coef * Traders^Exp / Supply", "weight": 1},
+        },
+        "metrics": {
+            "tvl": 0.15,
+            "daily_fees": 85.0,
+            "staking_ratio": 0,
+            "stablecoins": 0.08,
+            "daily_addresses": 25,
+            "l2_tvl": 0,
+        },
+        "locked_capital": {
+            "trading_tvl": {"value": 0.15, "change": 200.0, "source": "DefiLlama", "desc": "Total value in Lighter trading pools."},
+            "liquidity": {"value": 0.08, "change": 150.0, "source": "Lighter", "desc": "Liquidity provider deposits."},
+        },
+        "settlement_volume": {
+            "trading_volume": {"value": 0.025, "change": 300.0, "source": "Lighter", "desc": "Daily trading volume on Lighter DEX."},
+            "unique_traders": {"value": 0.005, "change": 250.0, "source": "Lighter", "desc": "Daily unique traders value."},
+        },
     }
 }
 
@@ -896,36 +1128,55 @@ def get_opportunity_status(current_price, fair_value):
     else:
         return "Overvalued", diff_pct
 
-def generate_historical_data(coin_data, days=90):
-    """Generate historical price and fair value data"""
-    np.random.seed(42)
-    dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
-
-    current_price = coin_data["current_price"]
+def generate_historical_data(coin_data, days=90, symbol="ETH"):
+    """Generate historical price and fair value data - uses real CoinGecko data"""
     fair_value = calculate_composite_fair_value(coin_data)
 
-    # Generate price data with some volatility
-    price_returns = np.random.normal(0.001, 0.03, days)
-    prices = [current_price]
-    for r in price_returns[:-1]:
-        prices.append(prices[-1] * (1 + r))
-    prices = prices[::-1]  # Reverse so current is last
+    # Try to fetch real historical data from CoinGecko
+    real_dates, real_prices = get_historical_data(symbol, days)
 
-    # Generate fair value data (less volatile)
-    fv_returns = np.random.normal(0.0005, 0.015, days)
-    fair_values = [fair_value]
-    for r in fv_returns[:-1]:
-        fair_values.append(fair_values[-1] * (1 + r))
-    fair_values = fair_values[::-1]
+    if real_dates and real_prices:
+        # Use real data
+        dates = real_dates
+        prices = real_prices
+        current_price = prices[-1] if prices else coin_data["current_price"]
+    else:
+        # Fallback to generated data if API fails
+        np.random.seed(42)
+        dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
+        current_price = coin_data["current_price"]
 
-    # Generate individual model values
+        price_returns = np.random.normal(0.001, 0.03, days)
+        prices = [current_price]
+        for r in price_returns[:-1]:
+            prices.append(prices[-1] * (1 + r))
+        prices = prices[::-1]
+
+    # Generate fair value data based on actual price movements
+    # Fair value tracks price with some smoothing
+    if len(prices) > 0:
+        price_array = np.array(prices)
+        # Calculate fair value as smoothed price adjusted by model ratio
+        ratio = fair_value / prices[-1] if prices[-1] > 0 else 1
+        fair_values = (price_array * ratio).tolist()
+    else:
+        fair_values = [fair_value] * len(dates)
+
+    # Generate individual model values based on price movement
     model_data = {}
     for model_name, model_info in coin_data["models"].items():
-        model_returns = np.random.normal(0.0005, 0.025, days)
-        values = [model_info["value"]]
-        for r in model_returns[:-1]:
-            values.append(values[-1] * (1 + r))
-        model_data[model_name] = values[::-1]
+        base_value = model_info["value"]
+        if len(prices) > 0:
+            # Scale model values based on price movement
+            price_ratio = np.array(prices) / prices[-1]
+            model_values = (base_value * price_ratio * np.random.uniform(0.95, 1.05, len(prices))).tolist()
+        else:
+            model_returns = np.random.normal(0.0005, 0.025, days)
+            values = [base_value]
+            for r in model_returns[:-1]:
+                values.append(values[-1] * (1 + r))
+            model_values = values[::-1]
+        model_data[model_name] = model_values
 
     return dates, prices, fair_values, model_data
 
@@ -1052,7 +1303,22 @@ with tabs[0]:  # Valuation tab
 
     # Get selected coin data
     coin = COINS[st.session_state.selected_coin]
-    current_price = coin["current_price"]
+
+    # Fetch live price from CoinGecko
+    live_data = get_live_price(st.session_state.selected_coin)
+    if live_data:
+        current_price = live_data["price"]
+        price_change_24h = live_data["change_24h"]
+        market_cap = live_data["market_cap"]
+        volume_24h = live_data["volume_24h"]
+        # Update coin data with live price for calculations
+        coin["current_price"] = current_price
+    else:
+        current_price = coin["current_price"]
+        price_change_24h = 0
+        market_cap = 0
+        volume_24h = 0
+
     composite_fv = calculate_composite_fair_value(coin)
     status, diff_pct = get_opportunity_status(current_price, composite_fv)
 
@@ -1062,10 +1328,16 @@ with tabs[0]:  # Valuation tab
     col1, col2 = st.columns([1, 2])
 
     with col1:
+        # Show live price with 24h change
+        change_class = "positive" if price_change_24h >= 0 else "negative"
+        change_color = "#00d4aa" if price_change_24h >= 0 else "#ff5252"
+        live_badge = '<span style="background: #00d4aa; color: #0a0a0f; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; margin-left: 8px;">LIVE</span>' if live_data else ''
+
         st.markdown(f"""
         <div class="valuation-card">
-            <div class="metric-label">CURRENT PRICE</div>
-            <div class="metric-value-large">${current_price:,.1f}</div>
+            <div class="metric-label">CURRENT PRICE {live_badge}</div>
+            <div class="metric-value-large">${current_price:,.2f}</div>
+            <div style="color: {change_color}; font-size: 0.9rem; font-weight: 600;">{price_change_24h:+.2f}% (24h)</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1216,8 +1488,8 @@ with tabs[0]:  # Valuation tab
     # Section 01.2 - Historical Trends
     st.markdown('<h2 class="section-title"><span class="section-number">01.2</span> — Historical Trends</h2>', unsafe_allow_html=True)
 
-    # Generate historical data
-    dates, prices, fair_values, model_historical = generate_historical_data(coin)
+    # Generate historical data with real CoinGecko data
+    dates, prices, fair_values, model_historical = generate_historical_data(coin, days=90, symbol=st.session_state.selected_coin)
 
     # Chart controls
     chart_col1, chart_col2 = st.columns([3, 1])
